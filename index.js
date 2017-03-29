@@ -29,14 +29,42 @@ app.engine('handlebars', handlebars({defaultLayout: 'main'}));
 // Add handlebars to the app
 app.set('view engine', 'handlebars');
 
+// =============================================================================
+// Postgres
+// =============================================================================
+var config = {
+  user: 'postgres', 				//env var: PGUSER
+  database: 'richwood-scentific', 	//env var: PGDATABASE
+  password: 'postgres', 			//env var: PGPASSWORD
+  host: 'localhost', 				// Server hosting the postgres database
+  port: 5432, 						//env var: PGPORT
+  max: 10, 							// max number of clients in the pool
+  idleTimeoutMillis: 30000	 		// how long a client is allowed to remain idle before being closed
+};
+var Pool = require('pg-pool')
+global.pool = new Pool(config)
+
+// attach an error handler to the pool for when a connected, idle client
+// receives an error by being disconnected, etc
+pool.on('error', function(error, client) {
+  // handle this in the same way you would treat process.on('uncaughtException')
+  // it is supplied the error as well as the idle client which received the error
+  console.log('Pool received an error: ' + error)
+})
+
 //-----------------------------------------
 // Setup some basic routes
 //
 
 // Default page
-app.get('/', function(req,res){
+app.get('/construction', function(req,res){
 	// Send the construction page
 	res.render('construction');
+});
+
+app.get('/', function(req,res){
+	// Send the construction page
+	res.render('home');
 });
 
 // Stub of login page
@@ -45,10 +73,32 @@ app.get("/login", function (req, res) {
 	res.render('login');
 });
 app.post("/login", function (req, res) {
-    console.log(req.body);
-		// Close connection
-		res.status(200).json({result: 'success', data:{}});
+    console.log(req.body.first_name);
+	// Close connection
+	res.status(200).json({result: 'success', data:{}});
 });
+
+//---------------------------------------------------------------------------------------------
+// Products
+
+var products = require('./routes/products');
+
+// Create
+app.post('/api/product', products.createProduct);
+
+// Read all
+app.get('/api/products', products.readProducts);
+
+// Read one
+app.get('/api/product/:id', products.readProduct);
+
+// Update
+app.put('/api/product', products.updateProduct);
+
+// Delete
+app.delete('/api/product', products.deleteProduct);
+
+//---------------------------------------------------------------------------------------------
 
 // If no routes match, send the 404 page
 app.use(function(req,res){
